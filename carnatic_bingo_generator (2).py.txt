@@ -1,0 +1,527 @@
+"""
+Carnatic Bingo Sheet Generator
+================================
+Run:  python3 carnatic_bingo_generator.py
+
+State is tracked in bingo_state.json (auto-created next to this script).
+Each run auto-increments the sheet number and rotates:
+  - concert-clue assignments (24 clues shuffled each time)
+  - MCQ selection (cycles through all questions before repeating)
+
+Assets expected in same folder as this script:
+  logo.png   – The Joy of Music logo (PNG)
+
+Output:  Carnatic_Bingo_Sheet_#N.docx  (exactly 2 pages)
+"""
+
+import json, os, random
+from docx import Document
+from docx.shared import Inches, Pt, RGBColor, Emu
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.enum.table import WD_TABLE_ALIGNMENT
+from docx.oxml.ns import qn
+from docx.oxml import OxmlElement
+
+# ═══════════════════════════════════════════════════════════════════
+#  MASTER DATA
+# ═══════════════════════════════════════════════════════════════════
+
+CONCERT_CLUES = [
+    "A composition that was not in Adi, Roopakam, Khanda Chapu, or Misra Chapu",
+    "A Shyama Shastri composition",
+    "A ragam with no Pa",
+    "Adi thalam",
+    "A Papanasam Sivan composition",
+    "A Telugu composition",
+    "Khanda Chapu",
+    "A ragam with no madhyamam",
+    "A Malayalam composition",
+    "A Thyagaraja composition",
+    "Misra Chapu",
+    "A composition that started before the samam",
+    "A composition that started after the samam",
+    "A Muthuswamy Dikshitar composition",
+    "A ragam or composition sung only for mic testing",
+    "A Purandaradasa composition",
+    "A Kannada composition",
+    "A Thani Avarthanam",
+    "A composition by a non-trinity composer",
+    "A Gopalakrishna Bharati composition",
+    "A Sanskrit composition",
+    "A prati-madhyama ragam",
+    "A Tamil composition",
+    "A composition that started on the samam",
+]
+
+MCQS = [
+    {"question": "Which composer is credited with introducing the raga systematization known as the 72 Melakarta scheme in its widely accepted form?",
+     "options": ["Purandara Dasa", "Venkatamakhin", "Tyagaraja", "Muthuswami Dikshitar"], "answer": "B"},
+    {"question": "In Carnatic music, the raga Todi belongs to which Melakarta?",
+     "options": ["Hanumatodi", "Kharaharapriya", "Mayamalavagowla", "Shankarabharanam"], "answer": "A"},
+    {"question": "Which tala structure consists of one laghu followed by two drutams?",
+     "options": ["Jhampa Tala", "Ata Tala", "Rupaka Tala", "Triputa Tala"], "answer": "D"},
+    {"question": 'The famous composition "Vatapi Ganapatim" was composed by:',
+     "options": ["Syama Sastri", "Tyagaraja", "Muthuswami Dikshitar", "Papanasam Sivan"], "answer": "C"},
+    {"question": 'Which raga is traditionally associated with the composition "Nagumomu Ganaleni"?',
+     "options": ["Abheri", "Kapi", "Bhairavi", "Abheri (older Carnatic usage)"], "answer": "D"},
+    {"question": "The term Graha Bhedam in Carnatic music refers to:",
+     "options": ["Modulation by shifting the tonic", "Improvisation without tala",
+                 "Ornamentation using gamakas", "Singing in multiple speeds"], "answer": "A"},
+    {"question": "Which musician is most strongly associated with popularizing the mandolin in Carnatic concerts?",
+     "options": ["Lalgudi Jayaraman", "Mandolin Srinivas", "T. N. Krishnan", "Palghat Mani Iyer"], "answer": "B"},
+    {"question": "Which of the following ragas is a janya of the Melakarta Kharaharapriya?",
+     "options": ["Hamsadhwani", "Kalyani", "Abheri", "Nattai"], "answer": "C"},
+    {"question": "The concept of Neraval primarily involves:",
+     "options": ["Singing solfege patterns", "Rhythmic percussion exchange",
+                 "Improvisation on a chosen lyrical line", "Tuning the tambura"], "answer": "C"},
+    {"question": "Which composer is known for the set of compositions called Pancharatna Kritis?",
+     "options": ["Tyagaraja", "Annamacharya", "Oottukkadu Venkata Kavi", "Swati Tirunal"], "answer": "A"},
+    {"question": "In a Ragam-Tanam-Pallavi performance, which section is rendered without rhythmic percussion initially?",
+     "options": ["Pallavi", "Tanam", "Ragam", "Kalpanaswaram"], "answer": "C"},
+    {"question": "Which raga is often cited as equivalent to the Western major scale?",
+     "options": ["Kharaharapriya", "Shankarabharanam", "Todi", "Natabhairavi"], "answer": "B"},
+    {"question": "The violin became a major Carnatic concert instrument largely through the efforts of:",
+     "options": ["Baluswami Dikshitar", "Semmangudi Srinivasa Iyer",
+                 "Ariyakudi Ramanuja Iyengar", "Chembai Vaidyanatha Bhagavatar"], "answer": "A"},
+    {"question": "Which tala has 14 aksharas in its Chatusra-jati form?",
+     "options": ["Dhruva Tala", "Ata Tala", "Matya Tala", "Eka Tala"], "answer": "B"},
+    {"question": "The term Gamakas refers to:",
+     "options": ["Rhythmic syllables for percussion", "Decorative oscillations and embellishments",
+                 "Types of talas", "A form of devotional poetry"], "answer": "B"},
+    {"question": 'Which saint-composer composed predominantly in Kannada and is regarded as the "Father of Carnatic Music"?',
+     "options": ["Purandara Dasa", "Kanaka Dasa", "Bhadrachala Ramadasu", "Kshetrayya"], "answer": "A"},
+    {"question": "Which percussion instrument commonly accompanies the mridangam in a tani avartanam?",
+     "options": ["Veena", "Ghatam", "Gottuvadyam", "Flute"], "answer": "B"},
+    {"question": "The concert format commonly followed in modern Carnatic performances was standardized largely by:",
+     "options": ["Ariyakudi Ramanuja Iyengar", "M. S. Subbulakshmi",
+                 "G. N. Balasubramaniam", "Madurai Mani Iyer"], "answer": "A"},
+    {"question": "Which raga employs both varieties of Nishada in its scale usage?",
+     "options": ["Kalyani", "Bhairavi", "Mohanam", "Hamsanandi"], "answer": "B"},
+    {"question": 'The Tamil composition "Kurai Ondrum Illai" is famously associated with:',
+     "options": ["D. K. Pattammal", "M. Balamuralikrishna", "M. S. Subbulakshmi", "T. Brinda"], "answer": "C"},
+]
+
+# ═══════════════════════════════════════════════════════════════════
+#  STATE MANAGEMENT
+# ═══════════════════════════════════════════════════════════════════
+
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+STATE_FILE = os.path.join(SCRIPT_DIR, "bingo_state.json")
+
+def load_state():
+    if os.path.exists(STATE_FILE):
+        with open(STATE_FILE) as f:
+            return json.load(f)
+    return {"sheet_number": 0, "mcq_index": 0, "clue_order": list(range(len(CONCERT_CLUES)))}
+
+def save_state(state):
+    with open(STATE_FILE, "w") as f:
+        json.dump(state, f, indent=2)
+
+def next_state():
+    state = load_state()
+    state["sheet_number"] += 1
+    order = list(range(len(CONCERT_CLUES)))
+    random.shuffle(order)
+    state["clue_order"] = order
+    current_mcq_idx = state.get("mcq_index", 0) % len(MCQS)
+    state["mcq_index"] = (current_mcq_idx + 1) % len(MCQS)
+    save_state(state)
+    return state["sheet_number"], order, current_mcq_idx
+
+# ═══════════════════════════════════════════════════════════════════
+#  DOCX HELPERS
+# ═══════════════════════════════════════════════════════════════════
+
+DEEP_TEAL  = "1B6B6B"
+GOLD       = "C8960C"
+LIGHT_TEAL = "D6EEEE"
+MID_TEAL   = "A8D5D5"
+FREE_BG    = "FFF3CD"
+BORDER_CLR = "5AACAC"
+WHITE      = "FFFFFF"
+DARK_TEXT  = "1A1A2E"
+
+def dxa(inches):
+    """Convert inches to DXA units."""
+    return int(inches * 1440)
+
+def emu(inches):
+    """Convert inches to EMU."""
+    return Emu(int(inches * 914400))
+
+def set_row_height(row, height_pt):
+    """Fix a table row to an exact height."""
+    tr = row._tr
+    trPr = tr.get_or_add_trPr()
+    trHeight = OxmlElement('w:trHeight')
+    trHeight.set(qn('w:val'), str(int(height_pt * 20)))   # pt → twips (1 pt = 20 twips)
+    trHeight.set(qn('w:hRule'), 'exact')
+    trPr.append(trHeight)
+
+def set_cell_bg(cell, hex_color):
+    tc = cell._tc
+    tcPr = tc.get_or_add_tcPr()
+    shd = OxmlElement('w:shd')
+    shd.set(qn('w:val'), 'clear')
+    shd.set(qn('w:color'), 'auto')
+    shd.set(qn('w:fill'), hex_color)
+    tcPr.append(shd)
+
+def set_cell_borders(cell, color="CCCCCC", size=4):
+    tc = cell._tc
+    tcPr = tc.get_or_add_tcPr()
+    tcB = OxmlElement('w:tcBorders')
+    for side in ['top', 'left', 'bottom', 'right']:
+        el = OxmlElement(f'w:{side}')
+        el.set(qn('w:val'), 'single')
+        el.set(qn('w:sz'), str(size))
+        el.set(qn('w:space'), '0')
+        el.set(qn('w:color'), color)
+        tcB.append(el)
+    tcPr.append(tcB)
+
+def set_cell_margins(cell, top=60, bottom=60, left=80, right=80):
+    tc = cell._tc
+    tcPr = tc.get_or_add_tcPr()
+    tcM = OxmlElement('w:tcMar')
+    for side, val in [('top', top), ('bottom', bottom), ('left', left), ('right', right)]:
+        el = OxmlElement(f'w:{side}')
+        el.set(qn('w:w'), str(val))
+        el.set(qn('w:type'), 'dxa')
+        tcM.append(el)
+    tcPr.append(tcM)
+
+def set_cell_valign(cell, align='center'):
+    tc = cell._tc
+    tcPr = tc.get_or_add_tcPr()
+    v = OxmlElement('w:vAlign')
+    v.set(qn('w:val'), align)
+    tcPr.append(v)
+
+def add_gold_rule(doc, before_pt=0, after_pt=3):
+    p = doc.add_paragraph()
+    p.paragraph_format.space_before = Pt(before_pt)
+    p.paragraph_format.space_after  = Pt(after_pt)
+    pPr = p._p.get_or_add_pPr()
+    pBdr = OxmlElement('w:pBdr')
+    b = OxmlElement('w:bottom')
+    b.set(qn('w:val'), 'single'); b.set(qn('w:sz'), '6'); b.set(qn('w:color'), GOLD)
+    pBdr.append(b); pPr.append(pBdr)
+
+def section_hdr(doc, text, size=10, before=3, after=2):
+    p = doc.add_paragraph()
+    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    p.paragraph_format.space_before = Pt(before)
+    p.paragraph_format.space_after  = Pt(after)
+    r = p.add_run(text)
+    r.bold = True; r.font.size = Pt(size)
+    r.font.color.rgb = RGBColor.from_string(DEEP_TEAL)
+
+def make_header_cell(cell, text, bg=DEEP_TEAL, font_size=7.5):
+    set_cell_bg(cell, bg)
+    p = cell.paragraphs[0]; p.clear()
+    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    r = p.add_run(text)
+    r.bold = True; r.font.size = Pt(font_size)
+    r.font.color.rgb = RGBColor.from_string(WHITE)
+
+def make_data_cell(cell, row_idx):
+    set_cell_bg(cell, LIGHT_TEAL if row_idx % 2 == 1 else WHITE)
+    cell.paragraphs[0].clear()
+
+# ═══════════════════════════════════════════════════════════════════
+#  BUILD DOCUMENT
+# ═══════════════════════════════════════════════════════════════════
+
+def build_bingo(sheet_number, clue_order, mcq_idx):
+    LOGO = os.path.join(SCRIPT_DIR, "logo.png")
+
+    # Build ordered clue map: grid positions A1-E5 skipping C3 (FREE)
+    grid_labels = [f"{r}{c}" for r in 'ABCDE' for c in range(1, 6) if not (r == 'C' and c == 3)]
+    clue_map = {grid_labels[i]: CONCERT_CLUES[clue_order[i]] for i in range(24)}
+    mcq = MCQS[mcq_idx]
+
+    doc = Document()
+    sec = doc.sections[0]
+    # US Letter, tight margins to maximise content area
+    sec.page_width    = Inches(8.5)
+    sec.page_height   = Inches(11)
+    sec.left_margin   = Inches(0.65)
+    sec.right_margin  = Inches(0.65)
+    sec.top_margin    = Inches(0.40)
+    sec.bottom_margin = Inches(0.40)
+
+    doc.styles['Normal'].font.name = 'Calibri'
+    doc.styles['Normal'].font.size = Pt(10)
+
+    # Content width in inches (for reference): 8.5 - 0.65*2 = 7.2"
+    # In DXA: 7.2 * 1440 = 10368
+
+    # ══════════════════════════════════════════════════════════════
+    #  PAGE 1
+    # ══════════════════════════════════════════════════════════════
+
+    # --- Logo ---
+    lp = doc.add_paragraph()
+    lp.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    lp.paragraph_format.space_before = Pt(0)
+    lp.paragraph_format.space_after  = Pt(0)
+    lp.add_run().add_picture(LOGO, width=Inches(2.6))
+
+    # --- Subtitle ---
+    sp = doc.add_paragraph()
+    sp.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    sp.paragraph_format.space_before = Pt(1)
+    sp.paragraph_format.space_after  = Pt(2)
+    r = sp.add_run(f"Carnatic Bingo  |  Bingo Sheet #{sheet_number}")
+    r.bold = True; r.font.size = Pt(11)
+    r.font.color.rgb = RGBColor.from_string(DEEP_TEAL)
+
+    add_gold_rule(doc, before_pt=0, after_pt=2)
+
+    # --- Info table 2×3 ---
+    # 3 equal cols across 7.2": each 2.4" = 3456 DXA
+    INFO_COL = 3456
+    info = doc.add_table(rows=2, cols=3)
+    info.alignment = WD_TABLE_ALIGNMENT.CENTER
+    for ri, row in enumerate(info.rows):
+        set_row_height(row, 14)          # very short rows
+        for ci, cell in enumerate(row.cells):
+            cell.width = emu(INFO_COL / 1440)
+            set_cell_borders(cell, color=BORDER_CLR, size=4)
+            set_cell_margins(cell, top=40, bottom=40, left=80, right=80)
+            set_cell_bg(cell, LIGHT_TEAL if ri == 0 else WHITE)
+    rows_data = [
+        ["Student Name: ___________________", "Teacher: ___________________",      "City, State: ___________________"],
+        ["Parent Name: ____________________", "Parent Email: ___________________", "Parent WhatsApp: ________________"],
+    ]
+    for ri, row_labels in enumerate(rows_data):
+        for ci, text in enumerate(row_labels):
+            cell = info.rows[ri].cells[ci]
+            p = cell.paragraphs[0]; p.clear()
+            r = p.add_run(text)
+            r.font.size = Pt(8.5); r.font.name = 'Calibri'
+
+    doc.add_paragraph().paragraph_format.space_after = Pt(2)
+
+    # --- Bingo grid ---
+    # Smaller cells: label col 0.28" = 403 DXA, data cols 0.72" = 1037 DXA
+    # Total: 403 + 5*1037 = 5588 DXA ≈ 3.88" (centred)
+    GRID_LABEL = 403
+    GRID_CELL  = 1037
+    GRID_ROW_H = 19   # pt — fixed row height keeps grid compact
+
+    bingo = doc.add_table(rows=6, cols=6)
+    bingo.alignment = WD_TABLE_ALIGNMENT.CENTER
+    col_widths_g = [GRID_LABEL] + [GRID_CELL] * 5
+
+    for ri, row in enumerate(bingo.rows):
+        set_row_height(row, GRID_ROW_H)
+        for ci, cell in enumerate(row.cells):
+            cell.width = emu(col_widths_g[ci] / 1440)
+            set_cell_borders(cell, color=BORDER_CLR, size=6)
+            set_cell_margins(cell, top=25, bottom=25, left=40, right=40)
+            set_cell_valign(cell, 'center')
+
+    # Header row
+    for ci, hdr in enumerate(['', '1', '2', '3', '4', '5']):
+        make_header_cell(bingo.rows[0].cells[ci], hdr, bg=DEEP_TEAL, font_size=9)
+
+    # Data rows
+    for ri in range(1, 6):
+        row_letter = 'ABCDE'[ri - 1]
+        lc = bingo.rows[ri].cells[0]
+        set_cell_bg(lc, MID_TEAL)
+        p = lc.paragraphs[0]; p.clear()
+        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        r = p.add_run(row_letter)
+        r.bold = True; r.font.size = Pt(9)
+        r.font.color.rgb = RGBColor.from_string(DARK_TEXT)
+
+        for ci in range(1, 6):
+            cell = bingo.rows[ri].cells[ci]
+            if ri == 3 and ci == 3:   # C3 = FREE
+                set_cell_bg(cell, FREE_BG)
+                p = cell.paragraphs[0]; p.clear()
+                p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                r = p.add_run("★ Answer MCQ ★")
+                r.bold = True; r.font.size = Pt(6.5)
+                r.font.color.rgb = RGBColor.from_string(GOLD)
+            else:
+                set_cell_bg(cell, LIGHT_TEAL if ri % 2 == 1 else WHITE)
+                cell.paragraphs[0].clear()
+
+    # Note under grid
+    note = doc.add_paragraph()
+    note.paragraph_format.space_before = Pt(2)
+    note.paragraph_format.space_after  = Pt(2)
+    note.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    nr = note.add_run("★  The FREE space (C3) may be crossed off by correctly answering the multiple choice question on the back.")
+    nr.italic = True; nr.font.size = Pt(7)
+    nr.font.color.rgb = RGBColor.from_string("555555")
+
+    add_gold_rule(doc, before_pt=0, after_pt=2)
+
+    # --- I Heard header ---
+    section_hdr(doc, "I Heard", size=11, before=2, after=2)
+
+    # --- Clue table: 12 rows × 2 cols ---
+    # Each col: 3.6" = 5184 DXA; total 7.2"
+    CLUE_COL = 5126   # slight inset so borders don't clip
+    CLUE_ROW_H = 15   # pt — tightly packed
+
+    half = 12
+    grid_l = grid_labels[:half]
+    grid_r = grid_labels[half:]
+
+    ct = doc.add_table(rows=half, cols=2)
+    ct.alignment = WD_TABLE_ALIGNMENT.CENTER
+    for ri, row in enumerate(ct.rows):
+        set_row_height(row, CLUE_ROW_H)
+        for ci, cell in enumerate(row.cells):
+            cell.width = emu(CLUE_COL / 1440)
+            set_cell_borders(cell, color=BORDER_CLR, size=4)
+            set_cell_margins(cell, top=30, bottom=30, left=65, right=65)
+
+    for i in range(half):
+        for ci, lbl in enumerate([grid_l[i], grid_r[i]]):
+            cell = ct.rows[i].cells[ci]
+            set_cell_bg(cell, LIGHT_TEAL if i % 2 == 0 else WHITE)
+            p = cell.paragraphs[0]; p.clear()
+            br = p.add_run(f"{lbl}.  ")
+            br.bold = True; br.font.size = Pt(7.5)
+            br.font.color.rgb = RGBColor.from_string(DEEP_TEAL)
+            tr = p.add_run(clue_map[lbl])
+            tr.font.size = Pt(7.5)
+
+    # ══════════════════════════════════════════════════════════════
+    #  PAGE 2
+    # ══════════════════════════════════════════════════════════════
+    doc.add_page_break()
+
+    # --- Logo + subtitle ---
+    lp2 = doc.add_paragraph()
+    lp2.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    lp2.paragraph_format.space_before = Pt(0)
+    lp2.paragraph_format.space_after  = Pt(1)
+    lp2.add_run().add_picture(LOGO, width=Inches(2.4))
+
+    sp2 = doc.add_paragraph()
+    sp2.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    sp2.paragraph_format.space_before = Pt(0)
+    sp2.paragraph_format.space_after  = Pt(2)
+    r2 = sp2.add_run(f"Carnatic Bingo  |  Bingo Sheet #{sheet_number}")
+    r2.bold = True; r2.font.size = Pt(10)
+    r2.font.color.rgb = RGBColor.from_string(DEEP_TEAL)
+
+    add_gold_rule(doc, before_pt=0, after_pt=3)
+
+    # --- Concert Tracking table ---
+    section_hdr(doc, "Concert Tracking", size=10, before=2, after=2)
+
+    # 8 cols across 7.2" = 10368 DXA
+    CT_HDRS   = ["Cell", "Song", "Ragam", "Thalam", "Composer", "Improv\n(A/T/N/K)", "Comp. Type", "Concert"]
+    CT_WIDTHS = [576, 1296, 1152, 864, 1152, 720, 1296, 720]   # sum = 7776 (centre-aligned)
+    CT_ROW_H  = 14   # pt
+
+    ctt = doc.add_table(rows=8, cols=8)
+    ctt.alignment = WD_TABLE_ALIGNMENT.CENTER
+    for ri, row in enumerate(ctt.rows):
+        set_row_height(row, CT_ROW_H if ri > 0 else 18)
+        for ci, cell in enumerate(row.cells):
+            cell.width = emu(CT_WIDTHS[ci] / 1440)
+            set_cell_borders(cell, color=BORDER_CLR, size=4)
+            set_cell_margins(cell, top=25, bottom=25, left=45, right=45)
+            set_cell_valign(cell, 'center')
+
+    for ci, hdr in enumerate(CT_HDRS):
+        make_header_cell(ctt.rows[0].cells[ci], hdr, font_size=7)
+    for ri in range(1, 8):
+        for ci in range(8):
+            make_data_cell(ctt.rows[ri].cells[ci], ri)
+
+    # --- Concert Details table ---
+    section_hdr(doc, "Concert Details", size=10, before=5, after=2)
+
+    CD_HDRS   = ["Concert #", "Date", "Artist", "Accompanists", "Notes", "Venue", "Location"]
+    CD_WIDTHS = [648, 864, 1296, 1296, 1296, 1188, 1188]   # sum = 7776
+    CD_ROW_H  = 14
+
+    cdt = doc.add_table(rows=8, cols=7)
+    cdt.alignment = WD_TABLE_ALIGNMENT.CENTER
+    for ri, row in enumerate(cdt.rows):
+        set_row_height(row, CD_ROW_H if ri > 0 else 18)
+        for ci, cell in enumerate(row.cells):
+            cell.width = emu(CD_WIDTHS[ci] / 1440)
+            set_cell_borders(cell, color=BORDER_CLR, size=4)
+            set_cell_margins(cell, top=25, bottom=25, left=45, right=45)
+            set_cell_valign(cell, 'center')
+
+    for ci, hdr in enumerate(CD_HDRS):
+        make_header_cell(cdt.rows[0].cells[ci], hdr, font_size=7.5)
+    for ri in range(1, 8):
+        for ci in range(7):
+            make_data_cell(cdt.rows[ri].cells[ci], ri)
+
+    # --- Multiple Choice Question ---
+    section_hdr(doc, "Multiple Choice Question", size=10, before=5, after=2)
+
+    mcq_t = doc.add_table(rows=1, cols=1)
+    mcq_t.alignment = WD_TABLE_ALIGNMENT.CENTER
+    mcq_cell = mcq_t.rows[0].cells[0]
+    mcq_cell.width = emu(7776 / 1440)
+    set_cell_bg(mcq_cell, FREE_BG)
+    set_cell_borders(mcq_cell, color=GOLD, size=8)
+    set_cell_margins(mcq_cell, top=80, bottom=80, left=140, right=140)
+
+    p0 = mcq_cell.paragraphs[0]; p0.clear()
+    qr = p0.add_run(mcq["question"])
+    qr.bold = True; qr.font.size = Pt(9.5)
+
+    for idx, opt in enumerate(mcq["options"]):
+        cp = mcq_cell.add_paragraph()
+        cp.paragraph_format.space_before = Pt(1)
+        cr = cp.add_run(f"  \u25a1  {chr(65+idx)})  {opt}")
+        cr.font.size = Pt(9.5)
+
+    # --- How to Play ---
+    htp = doc.add_paragraph()
+    htp.paragraph_format.space_before = Pt(6)
+    htp.paragraph_format.space_after  = Pt(0)
+    pPr = htp._p.get_or_add_pPr()
+    pBdr = OxmlElement('w:pBdr')
+    top_el = OxmlElement('w:top')
+    top_el.set(qn('w:val'), 'single'); top_el.set(qn('w:sz'), '6')
+    top_el.set(qn('w:color'), GOLD)
+    pBdr.append(top_el); pPr.append(pBdr)
+
+    ht1 = htp.add_run("How to play:  ")
+    ht1.bold = True; ht1.font.size = Pt(8.5)
+    ht1.font.color.rgb = RGBColor.from_string(DEEP_TEAL)
+    ht2 = htp.add_run(
+        'At a concert, when you hear or see something that matches one of the hints on page 1 '
+        '("I Heard"), put a check or X in the matching empty square (A1-E5). '
+        'Get 5 in a row - horizontally, vertically, or diagonally - to complete your Bingo! '
+        'The FREE space (C3) is unlocked by correctly answering the multiple choice question above.'
+    )
+    ht2.font.size = Pt(8.5)
+
+    # --- Save ---
+    out_name = f"Carnatic_Bingo_Sheet_{sheet_number}.docx"
+    out_path = os.path.join(SCRIPT_DIR, out_name)
+    doc.save(out_path)
+    return out_path, out_name
+
+
+# ═══════════════════════════════════════════════════════════════════
+#  MAIN
+# ═══════════════════════════════════════════════════════════════════
+
+if __name__ == "__main__":
+    sheet_number, clue_order, mcq_idx = next_state()
+    path, name = build_bingo(sheet_number, clue_order, mcq_idx)
+    print(f"Generated : {name}")
+    print(f"Sheet #   : {sheet_number}")
+    print(f"MCQ used  : #{mcq_idx + 1} — {MCQS[mcq_idx]['question'][:65]}...")
+    print(f"Saved to  : {path}")
