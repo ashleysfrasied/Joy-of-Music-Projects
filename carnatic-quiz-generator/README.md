@@ -32,6 +32,19 @@ Output: `Quiz39/Quiz39_video.mp4`
 
 Use `--seed 42` for a reproducible clip order.
 
+## Source audio
+
+Full-length recordings for clip extraction live in **`audio-clips/`** (downloaded from GCS — not committed to git). See `audio-clips/README.md`.
+
+Download source files:
+
+```bash
+./fetch_audio_clips.sh
+ls audio-clips/*.mp3
+```
+
+When preparing a quiz, use the **Excel spreadsheet** (see `automation-process.md`) to pick ragam pairs and source tracks, then extract ~30 second vocal segments into the target `Quiz*` folder. Never edit the originals in `audio-clips/`.
+
 ## What each quiz folder needs
 
 | File | Purpose |
@@ -71,6 +84,8 @@ Prefer hyphens (`Performer-Ragam.mp3`). Underscore-only names (e.g. `MSS_Kharaha
 
 | Path | Purpose |
 |------|---------|
+| `audio-clips/` | Full-length source MP3s (gitignored; fetch with `fetch_audio_clips.sh`) |
+| `fetch_audio_clips.sh` | Download source MP3s from GCS |
 | `Pics/` | Performer photos (`.jpg`, `.jpeg`, `.png`, `.webp`, `.gif`) |
 | `performers.json` | Maps short keys to full display names on clip slides |
 | `intro-background.jpg` | Background for the intro slide |
@@ -101,6 +116,8 @@ carnatic-quiz-generator/
 ├── automation-process.md    # Full workflow spec (partially automated)
 ├── performers.json
 ├── intro-background.jpg
+├── fetch_audio_clips.sh     # Download source MP3s from GCS
+├── audio-clips/             # Full-length source MP3s (gitignored)
 ├── Pics/                    # Performer photos
 ├── Quiz39/                  # Example: complete quiz + video
 ├── Quiz40/                  # MP3s only (no video yet)
@@ -115,11 +132,17 @@ See `automation-process.md` for the end-to-end process Ashley described. **Imple
 **Not yet automated:**
 
 - Picking ragam pairs from a spreadsheet (similar ragams, 3+1 clip selection)
-- Extracting ~30s vocal segments from source recordings
+- Extracting ~30s vocal segments from `audio-clips/` source recordings
 - Human approval checkpoints per clip
 - Auto-creating numbered quiz folders and metadata files
 
 Until those steps exist, prepare each quiz folder manually (four MP3s + `quiz-text.md`), then run `build_quiz_video.py`.
+
+## Tests
+
+```bash
+.venv/bin/python -m pytest tests/ -v
+```
 
 ## Troubleshooting
 
