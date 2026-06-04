@@ -138,6 +138,12 @@ See `automation-process.md` for the end-to-end process Ashley described. **Imple
 
 Until those steps exist, prepare each quiz folder manually (four MP3s + `quiz-text.md`), then run `build_quiz_video.py`.
 
+## Tests
+
+```bash
+.venv/bin/python -m pytest tests/ -v
+```
+
 ## Troubleshooting
 
 | Error | Fix |

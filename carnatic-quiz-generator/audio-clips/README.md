@@ -46,6 +46,12 @@ Ragam metadata for quiz prep lives in the **Excel spreadsheet** (see `automation
 
 ## Adding more albums
 
+Keep all source MP3s **flat in `audio-clips/`** (no subfolders). Use a distinct filename prefix per album so files from different albums do not collide:
+
 1. Extend `fetch_audio_clips.sh` (or add a sibling script) for the new GCS prefix.
-2. Use a distinct local filename prefix per album (e.g. `Performer_Album-002_01-…`).
+2. Set a unique `LOCAL_PREFIX` (e.g. `Performer_Album-002`).
 3. Add the performer to `performers.json` and a photo under `Pics/` if needed.
+
+## Rights and usage
+
+These recordings are project-licensed source material stored in a private GCS bucket (`mwappv1-carnatic`). Use them only for Carnatic quiz video production within this project. Do not redistribute or publish the full-length source files outside the team workflow.
