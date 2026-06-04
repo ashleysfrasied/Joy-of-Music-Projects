@@ -49,12 +49,23 @@ Question 2
 
 Line 2 highlights **odd** on the intro slide.
 
+## Source audio
+
+Full-length recordings for clip extraction are in **`audio-clips/`** (downloaded from GCS bucket `mwappv1-carnatic` — not in git). See `audio-clips/README.md`.
+
+```bash
+./fetch_audio_clips.sh
+ls audio-clips/*.mp3
+```
+
+Never edit originals in `audio-clips/` — trim copies into the quiz folder. **Ragam selection** uses the Excel spreadsheet (`automation-process.md`), not filenames in `audio-clips/`.
+
 ## Prepare a new quiz (manual — not scripted yet)
 
 Follow `carnatic-quiz-generator/automation-process.md` until spreadsheet/clip automation exists:
 
-1. Pick **two ragams** that differ by only one or two notes (subtle “odd one out”).
-2. Choose **3** audio sources from one ragam and **1** from the other (random pair each run).
+1. Pick **two ragams** that differ by only one or two notes (subtle “odd one out”) using the **Excel spreadsheet**.
+2. Choose **3** audio sources from one ragam and **1** from the other (random pair each run) from **`audio-clips/`**, guided by spreadsheet ragam metadata.
 3. Extract ~**30 seconds** per clip with **vocal** content; label working files clip1–clip4 where **clip4 is always the odd ragam**.
 4. **Checkpoint after each clip** — confirm the segment before continuing.
 5. Create the next numbered folder: `Quiz42`, `Quiz43`, … (scan existing `Quiz*` folders for the highest number + 1).
