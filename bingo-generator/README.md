@@ -20,9 +20,10 @@ If you want to run this manually you can use the following commands:
 cd bingo-generator
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
-sips -s format png BrandLogoTJOMWords-SideBySide-WhiteBG.jpg --out logo.png   # once
 .venv/bin/python carnatic_bingo_generator.py
 ```
+
+Layout and static content come from `Input_Reference_Carnatic_Bingo_Sheet.docx` (edit in Word for formatting). Clues come from `Input_Bingo_Questions.docx`; MCQs from `Input_Multiple_Choice_Question_And_Answer_List.docx`.
 
 Output: `completed-bingo-sheets/Carnatic_Bingo_Sheet_001.docx`, `002.docx`, …
 
