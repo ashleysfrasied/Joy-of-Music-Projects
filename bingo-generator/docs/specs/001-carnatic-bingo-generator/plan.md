@@ -18,9 +18,9 @@ Build a Python generator that reads concert clues and MCQs from two Word documen
 
 | File | Purpose |
 |------|---------|
-| `Input_Bingo_Questions.docx` | 24 clues |
-| `Input_Multiple_Choice_Question_And_Answer_List.docx` | 20 MCQs |
-| `Input_Reference_Carnatic_Bingo_Sheet.docx` | Layout template (copied per run) |
+| `input_bingo_questions.docx` | 24 clues |
+| `input_multiple_choice_Q&A.docx` | 20 MCQs |
+| `input_reference_bingo_sheet.docx` | Layout template (copied per run) |
 | `BrandLogoTJOMWords-SideBySide-WhiteBG.jpg` | Header logo |
 | `carnatic_bingo_generator (2).py.txt` | Starting point for layout code |
 
@@ -36,8 +36,8 @@ Build a Python generator that reads concert clues and MCQs from two Word documen
 ```mermaid
 flowchart LR
   subgraph inputs [ReadOnly Inputs]
-    CL[Input_Bingo_Questions.docx]
-    MQ[Input_Multiple_Choice_Question_And_Answer_List.docx]
+    CL[input_bingo_questions.docx]
+    MQ[input_multiple_choice_Q&A.docx]
     LG[Logo JPG]
   end
   subgraph core [carnatic_bingo_generator.py]
