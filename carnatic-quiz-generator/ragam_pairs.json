@@ -1,0 +1,24 @@
+{
+  "pairs": [
+    {"main": "Hindolam", "odd": "Hamsanandi"},
+    {"main": "Kambhoji", "odd": "Harikambhoji"},
+    {"main": "Kharaharapriya", "odd": "Bhairavi"},
+    {"main": "Mohanam", "odd": "Hindolam"},
+    {"main": "Kalyani", "odd": "Yadukulakambhoji"},
+    {"main": "Kalyani", "odd": "Sankarabharanam"},
+    {"main": "Todi", "odd": "Bhairavi"},
+    {"main": "Bhairavi", "odd": "Mukhari"},
+    {"main": "Sankarabharanam", "odd": "Harikambhoji"},
+    {"main": "Kharaharapriya", "odd": "Abheri"},
+    {"main": "Kambhoji", "odd": "Yadukulakambhoji"},
+    {"main": "Pantuvarali", "odd": "Mukhari"},
+    {"main": "Anandabhairavi", "odd": "Reetigaula"},
+    {"main": "Sahana", "odd": "Kedaragaula"},
+    {"main": "Madhyamavati", "odd": "Suddhasaveri"},
+    {"main": "Begada", "odd": "Bilahari"},
+    {"main": "Darbar", "odd": "Darbarikaanada"},
+    {"main": "Atana", "odd": "Behag"},
+    {"main": "Ranjani", "odd": "Suddhasaveri"},
+    {"main": "Hamsadhvani", "odd": "Mohanakalyani"}
+  ]
+}

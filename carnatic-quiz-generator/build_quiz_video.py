@@ -36,10 +36,43 @@ TEXT_NAME = (248, 248, 252)
 CLIP_MAX_DURATION_SEC = 30.0
 AUDIO_RATE = 48000
 AUDIO_CHANNELS = 2
+COMPLETED_VIDEOS_DIRNAME = "completed-videos"
+COMPLETED_QUIZ_DIR_RE = re.compile(r"^Quiz(\d+)$", re.IGNORECASE)
+COMPLETED_VIDEO_RE = re.compile(r"^Quiz(\d+)_video\.mp4$", re.IGNORECASE)
+QUIZ_TEXT_FILENAMES = (
+    "quiz-text.md",
+    "Quiz-Text.md",
+    "QuixText.md",
+    "QuizText.md",
+)
 
 
 def normalize_stem(s: str) -> str:
     return re.sub(r"[^a-z0-9]", "", s.lower())
+
+
+def next_completed_quiz_output(completed_dir: Path) -> tuple[Path, Path, int]:
+    """Return (quiz_dir, video_path, quiz_number) under completed-videos/."""
+    completed_dir.mkdir(parents=True, exist_ok=True)
+    highest = 0
+    for path in completed_dir.iterdir():
+        if path.is_dir():
+            match = COMPLETED_QUIZ_DIR_RE.match(path.name)
+            if match:
+                highest = max(highest, int(match.group(1)))
+        elif path.is_file():
+            match = COMPLETED_VIDEO_RE.match(path.name)
+            if match:
+                highest = max(highest, int(match.group(1)))
+    quiz_num = highest + 1
+    quiz_dir = completed_dir / f"Quiz{quiz_num}"
+    return quiz_dir, quiz_dir / f"Quiz{quiz_num}_video.mp4", quiz_num
+
+
+def next_completed_video_path(completed_dir: Path) -> Path:
+    """Legacy helper — returns the video path inside the next quiz folder."""
+    _, video_path, _ = next_completed_quiz_output(completed_dir)
+    return video_path
 
 
 def load_performers(path: Path) -> dict[str, str]:
@@ -51,6 +84,13 @@ def load_performers(path: Path) -> dict[str, str]:
 
 def performer_key_from_audio(audio_path: Path) -> str:
     return audio_path.stem.split("-")[0]
+
+
+def ragam_from_audio(audio_path: Path) -> str:
+    stem = audio_path.stem
+    if "-" in stem:
+        return stem.split("-", 1)[1]
+    return stem
 
 
 def score_image_match(key: str, pic_path: Path) -> tuple[int, int, int] | None:
@@ -424,29 +464,113 @@ def strip_display_markdown(line: str) -> str:
     return s.strip()
 
 
-def read_quiz_text(quiz_dir: Path) -> list[str]:
-    """Load intro copy from quiz-text.md (or legacy names)."""
-    names = (
-        "quiz-text.md",
-        "Quiz-Text.md",
-        "QuixText.md",
-        "QuizText.md",
-    )
-    for name in names:
-        p = quiz_dir / name
-        if p.is_file():
-            return _parse_quiz_text_file(p)
-    for p in sorted(quiz_dir.iterdir()):
+def find_quiz_text_path(quiz_dir: Path) -> Path:
+    for name in QUIZ_TEXT_FILENAMES:
+        path = quiz_dir / name
+        if path.is_file():
+            return path
+    for path in sorted(quiz_dir.iterdir()):
         if (
-            p.is_file()
-            and p.suffix.lower() == ".md"
-            and "text" in p.stem.lower()
-            and p.stem.lower() not in {"readme"}
+            path.is_file()
+            and path.suffix.lower() == ".md"
+            and "text" in path.stem.lower()
+            and path.stem.lower() not in {"readme"}
         ):
-            return _parse_quiz_text_file(p)
+            return path
     raise FileNotFoundError(
         f"Expected quiz-text.md (or QuixText.md / QuizText.md) in {quiz_dir}"
     )
+
+
+def write_quiz_text(out_path: Path, source_path: Path, quiz_num: int) -> None:
+    text = source_path.read_text(encoding="utf-8")
+    updated, count = re.subn(
+        r"(Carnatic Quiz #)\d+",
+        rf"\g<1>{quiz_num}",
+        text,
+        count=1,
+    )
+    if count == 0:
+        lines = text.splitlines()
+        if len(lines) >= 3:
+            lines[2] = re.sub(r"#\d+", f"#{quiz_num}", lines[2]) or f"Carnatic Quiz #{quiz_num}"
+            updated = "\n".join(lines) + ("\n" if text.endswith("\n") else "")
+        else:
+            updated = text
+    out_path.write_text(updated, encoding="utf-8")
+
+
+def display_name_for_key(key: str, performers: dict[str, str]) -> str:
+    if key in performers:
+        return performers[key]
+    normalized = normalize_stem(key)
+    for perf_key, name in performers.items():
+        perf_norm = normalize_stem(perf_key)
+        if perf_norm == normalized or normalized in perf_norm or perf_norm.startswith(normalized):
+            return name
+    return key
+
+
+def build_quiz_metadata(
+    quiz_num: int,
+    source_audios: list[Path],
+    performers: dict[str, str],
+) -> str:
+    """Answer key: clips 1–3 share the main ragam; clip 4 is the odd ragam."""
+    ragam_counts: dict[str, int] = {}
+    for audio in source_audios:
+        ragam = ragam_from_audio(audio)
+        ragam_counts[ragam] = ragam_counts.get(ragam, 0) + 1
+
+    if len(ragam_counts) != 2 or sorted(ragam_counts.values()) != [1, 3]:
+        ragam_summary = ", ".join(f"{r}×{c}" for r, c in sorted(ragam_counts.items()))
+        raise ValueError(
+            f"Expected 3 clips in one ragam and 1 in another, got: {ragam_summary}"
+        )
+
+    odd_ragam = min(ragam_counts, key=ragam_counts.get)
+    main_ragam = max(ragam_counts, key=ragam_counts.get)
+    main_clips = sorted(
+        (a for a in source_audios if ragam_from_audio(a) == main_ragam),
+        key=lambda p: p.name,
+    )
+    odd_clip = next(a for a in source_audios if ragam_from_audio(a) == odd_ragam)
+
+    lines = [
+        f"# Quiz {quiz_num} — {main_ragam} vs {odd_ragam}",
+        "",
+        "| Clip | Performer | Ragam | File |",
+        "|------|-----------|-------|------|",
+    ]
+    for slot, audio in enumerate(main_clips, start=1):
+        key = performer_key_from_audio(audio)
+        name = display_name_for_key(key, performers)
+        lines.append(f"| {slot} | {name} | {main_ragam} | {audio.name} |")
+    key = performer_key_from_audio(odd_clip)
+    name = display_name_for_key(key, performers)
+    lines.append(f"| 4 (odd) | {name} | {odd_ragam} | {odd_clip.name} |")
+    lines.append("")
+    return "\n".join(lines)
+
+
+def write_output_bundle(
+    out_dir: Path,
+    quiz_num: int,
+    source_audios: list[Path],
+    performers: dict[str, str],
+    quiz_text_source: Path,
+) -> None:
+    out_dir.mkdir(parents=True, exist_ok=True)
+    write_quiz_text(out_dir / "quiz-text.md", quiz_text_source, quiz_num)
+    (out_dir / "quiz-answer.md").write_text(
+        build_quiz_metadata(quiz_num, source_audios, performers),
+        encoding="utf-8",
+    )
+
+
+def read_quiz_text(quiz_dir: Path) -> list[str]:
+    """Load intro copy from quiz-text.md (or legacy names)."""
+    return _parse_quiz_text_file(find_quiz_text_path(quiz_dir))
 
 
 def _parse_quiz_text_file(path: Path) -> list[str]:
@@ -479,7 +603,13 @@ def parse_args() -> argparse.Namespace:
         "--output",
         type=Path,
         default=None,
-        help="Output mp4 path (default: <quiz-dir>/<folder>_video.mp4)",
+        help="Output mp4 path (default: completed-videos/Quiz{N}/Quiz{N}_video.mp4)",
+    )
+    p.add_argument(
+        "--completed-videos-dir",
+        type=Path,
+        default=None,
+        help=f"Folder for auto-numbered outputs (default: <assets-dir>/{COMPLETED_VIDEOS_DIRNAME})",
     )
     p.add_argument(
         "--intro-duration",
@@ -529,8 +659,10 @@ def main() -> None:
         raise SystemExit(f"Pics folder not found: {pics_dir}")
 
     performers = load_performers(performers_path)
+    quiz_text_source = find_quiz_text_path(quiz_dir)
     lines = read_quiz_text(quiz_dir)
-    audios = sorted(quiz_dir.glob("*.mp3"))
+    source_audios = sorted(quiz_dir.glob("*.mp3"))
+    audios = list(source_audios)
     if len(audios) != 4:
         raise SystemExit(
             f"Expected exactly 4 mp3 files in {quiz_dir}, found {len(audios)}"
@@ -538,11 +670,43 @@ def main() -> None:
 
     random.shuffle(audios)
 
+    missing_pics: list[str] = []
+    for audio in audios:
+        key = performer_key_from_audio(audio)
+        try:
+            find_performer_image(pics_dir, key)
+        except FileNotFoundError:
+            missing_pics.append(f"{audio.name} (performer key {key!r})")
+    if missing_pics:
+        raise SystemExit(
+            "Each quiz MP3 needs a matching photo in Pics/. Missing:\n  "
+            + "\n  ".join(missing_pics)
+        )
+
+    completed_dir = (
+        args.completed_videos_dir.resolve()
+        if args.completed_videos_dir is not None
+        else assets / COMPLETED_VIDEOS_DIRNAME
+    )
+
+    out_dir: Path
+    quiz_num: int
     out_final = args.output
     if out_final is None:
-        out_final = quiz_dir / f"{quiz_dir.name}_video.mp4"
+        out_dir, out_final, quiz_num = next_completed_quiz_output(completed_dir)
     else:
         out_final = out_final.resolve()
+        out_dir = out_final.parent
+        match = COMPLETED_VIDEO_RE.match(out_final.name)
+        dir_match = COMPLETED_QUIZ_DIR_RE.match(out_dir.name)
+        if match:
+            quiz_num = int(match.group(1))
+        elif dir_match:
+            quiz_num = int(dir_match.group(1))
+        else:
+            quiz_num = 0
+
+    out_dir.mkdir(parents=True, exist_ok=True)
 
     tmpdir = Path(tempfile.mkdtemp(prefix="carnatic_quiz_"))
     try:
@@ -558,7 +722,7 @@ def main() -> None:
         for i, audio in enumerate(audios, start=1):
             key = performer_key_from_audio(audio)
             pic_path = find_performer_image(pics_dir, key)
-            display_name = performers.get(key, key)
+            display_name = display_name_for_key(key, performers)
             slide_png = tmpdir / f"slide_{i}.png"
             draw_clip_slide(pic_path, i, display_name, slide_png)
             seg = tmpdir / f"seg_{i}.mp4"
@@ -570,7 +734,19 @@ def main() -> None:
     finally:
         shutil.rmtree(tmpdir, ignore_errors=True)
 
+    if quiz_num > 0:
+        write_output_bundle(
+            out_dir,
+            quiz_num,
+            source_audios,
+            performers,
+            quiz_text_source,
+        )
+
     print(f"Wrote {out_final}")
+    if quiz_num > 0:
+        print(f"Wrote {out_dir / 'quiz-text.md'}")
+        print(f"Wrote {out_dir / 'quiz-answer.md'}")
 
 
 if __name__ == "__main__":
