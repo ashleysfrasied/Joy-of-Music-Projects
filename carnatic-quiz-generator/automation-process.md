@@ -1,10 +1,11 @@
 Automation process
- 
+
 Collecting the information for the video
-1.	Ask AI to pick two regams from the Excel spreadsheet. One regam with 3 audio files and the other regam with 1 audio file. When selecting the regam files for the “find the odd one out” quiz videos, the regam should only differ by one or two notes so it is not so obvious what the answer is. Full-length source recordings are in `carnatic-quiz-generator/audio-clips/` (download with `fetch_audio_clips.sh`; see `audio-clips/README.md`).
-2.	The regams should be picked in a pair randomly each time.
-3.	After the regams are picked, 3 audios from one should be selected and 1 audio from the other should be selected from `audio-clips/`.
-4.	Each audio clip should then be labeled clip1, clip2, clip3 until clip4 which should always be the odd one out (opposing regam).
+
+1.	Run `select_quiz_tracks.py` to pick a similar ragam pair from `ragam_pairs.json` and choose 3 vocal tracks from the main ragam plus 1 from the odd ragam. Track metadata comes from `MasterWebAppMusicIndex.csv`. Only local files in `audio-clips/` are considered (download with `fetch_audio_clips.sh`; see `audio-clips/README.md`).
+2.	The ragam pair is chosen randomly each run (use `--seed` for reproducibility).
+3.	After the ragams are picked, 3 audios from the main ragam and 1 from the odd ragam are selected randomly from eligible local `audio-clips/` files.
+4.	Each audio clip should then be labeled clip1, clip2, clip3 until clip4 which should always be the odd one out (opposing ragam).
 5.	It should select a 30 second clip with vocal cords as part of the audio.
 6.	It should start running each clip and there should be a check point after it gets each clip to make sure that the part of the audio is correct, if it is it will keep going through and getting the other clip audios.
 7.	After all the clip audios have been approved, clips can be randomly arranged into a video format.

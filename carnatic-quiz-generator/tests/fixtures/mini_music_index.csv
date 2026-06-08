@@ -1,0 +1,8 @@
+Trk,Song,Ragam,Thalam,Composer,Musician,ConcertFolder,FileName,RelativePath,Duration,MainArtist,Type
+1,Song A,Hindolam,Adi,Thyagaraja,PalghatKVNarayanaswamy,Album-018,01-A.mp3,PalghatKVNarayanaswamy/Album-018/01-A.mp3,0:10:00,KVN,Vocal
+2,Song B,Hindolam,Adi,Thyagaraja,MDRamanathan,Album-001,02-B.mp3,MDRamanathan/Album-001/02-B.mp3,0:10:00,MDR,Vocal
+3,Song C,Hindolam,Adi,Thyagaraja,GNBalasubramaniam,Album-007,03-C.mp3,GNBalasubramaniam/Album-007/03-C.mp3,0:10:00,GNB,Vocal
+4,Song D,Hindolam,Adi,Thyagaraja,PalghatKVNarayanaswamy,Album-025,04-D.mp3,PalghatKVNarayanaswamy/Album-025/04-D.mp3,0:10:00,KVN,Vocal
+5,Song E,Hamsanandi,Adi,Thyagaraja,DKJayaraman,Album-003,05-E.mp3,DKJayaraman/Album-003/05-E.mp3,0:10:00,DKJ,Vocal
+6,Song F,Kambhoji,Adi,Thyagaraja,PalghatKVNarayanaswamy,Album-096,06-F.mp3,PalghatKVNarayanaswamy/Album-096/06-F.mp3,0:10:00,KVN,Vocal
+7,Clarinet G,Gaula,Adi,Dikshitar,AKCNatarajan,Album-001,07-G.mp3,AKCNatarajan/Album-001/07-G.mp3,0:10:00,AKC,Clarinet

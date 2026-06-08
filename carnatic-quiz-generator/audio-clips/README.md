@@ -2,7 +2,7 @@
 
 Full-length concert recordings used to extract ~30 second quiz clips. **Do not edit these files in place** — trim copies into the target `Quiz*` folder instead.
 
-MP3s are **not committed to git** (too large). Download them locally with the fetch script (see below).
+MP3s are **not committed to git** (too large). Download them locally with the fetch scripts (see below).
 
 ## Download local copies
 
@@ -10,6 +10,15 @@ From `carnatic-quiz-generator/`:
 
 ```bash
 ./fetch_audio_clips.sh
+```
+
+This fetches starter albums that support the **Hindolam / Hamsanandi** pair in `ragam_pairs.json` (KVN, MDR, GNB, DKJ albums).
+
+Fetch a specific album:
+
+```bash
+./fetch_album.sh PalghatKVNarayanaswamy Album-018
+./fetch_album.sh MDRamanathan Album-001
 ```
 
 Requires [gsutil](https://cloud.google.com/storage/docs/gsutil) and authenticated access to bucket `mwappv1-carnatic`.
@@ -20,37 +29,52 @@ List what you have locally:
 ls audio-clips/*.mp3
 ```
 
-## Upstream (Google Cloud Storage)
+Then select quiz tracks:
 
-Console: [mwappv1-carnatic / AKCNatarajan / Album-001](https://console.cloud.google.com/storage/browser/mwappv1-carnatic/AKCNatarajan/Album-001;tab=objects?prefix=&forceOnObjectsSortingFiltering=false)
-
-**GCS object names** (as stored in the bucket):
-
-```text
-gs://mwappv1-carnatic/AKCNatarajan/Album-001/01-SreeMahaaganapatiravatuMaam.mp3
-gs://mwappv1-carnatic/AKCNatarajan/Album-001/02-Gaanamoorte.mp3
-…
+```bash
+.venv/bin/python select_quiz_tracks.py
 ```
 
-**Local names after fetch** — `fetch_audio_clips.sh` prefixes each object with the album id so multiple albums can share `audio-clips/`:
+## Upstream (Google Cloud Storage)
+
+Console: [mwappv1-carnatic](https://console.cloud.google.com/storage/browser/mwappv1-carnatic;tab=objects)
+
+**GCS object path** (from `MasterWebAppMusicIndex.csv` column `RelativePath`):
 
 ```text
-AKCNatarajan_Album-001_01-SreeMahaaganapatiravatuMaam.mp3
-AKCNatarajan_Album-001_02-Gaanamoorte.mp3
-…
+gs://mwappv1-carnatic/PalghatKVNarayanaswamy/Album-018/07-RaamanukkuMannanMudi.mp3
+```
+
+**Local names after fetch** — `{Musician}_{ConcertFolder}_{FileName}`:
+
+```text
+PalghatKVNarayanaswamy_Album-018_07-RaamanukkuMannanMudi.mp3
 ```
 
 ## Ragam selection
 
-Ragam metadata for quiz prep lives in the **Excel spreadsheet** (see `automation-process.md`), not in this folder. Use the spreadsheet to pick ragam pairs and match tracks; use `audio-clips/` only for the full-length source files to trim from.
+Ragam metadata lives in **`MasterWebAppMusicIndex.csv`**. Run `select_quiz_tracks.py` to randomly pick a similar pair from `ragam_pairs.json` and choose 3+1 local vocal tracks. Selection requires:
+
+- Source MP3 present in `audio-clips/`
+- `Type == Vocal` in the CSV
+- Musician mapped in `musicians.json` with a photo in `Pics/`
+
+If selection fails with “No valid ragam pairs”, fetch more albums for a pair listed in `ragam_pairs.json`. Examples for other pairs:
+
+```bash
+./fetch_album.sh PalghatKVNarayanaswamy Album-096   # Kambhoji
+./fetch_album.sh SemmangudiDrRSrinivasaIyer Album-003  # Harikambhoji
+./fetch_album.sh MaduraiSSomasundaram Album-003     # Kharaharapriya
+./fetch_album.sh RamnadKrishnan Album-010           # Bhairavi
+```
 
 ## Adding more albums
 
-Keep all source MP3s **flat in `audio-clips/`** (no subfolders). Use a distinct filename prefix per album so files from different albums do not collide:
+Keep all source MP3s **flat in `audio-clips/`** (no subfolders). Use `fetch_album.sh` with the `Musician` and `ConcertFolder` values from `MasterWebAppMusicIndex.csv`.
 
-1. Extend `fetch_audio_clips.sh` (or add a sibling script) for the new GCS prefix.
-2. Set a unique `LOCAL_PREFIX` (e.g. `Performer_Album-002`).
-3. Add the performer to `performers.json` and a photo under `Pics/` if needed.
+1. Run `./fetch_album.sh <Musician> <ConcertFolder>`.
+2. Add the musician to `musicians.json` and `performers.json` if needed.
+3. Add a photo under `Pics/` if needed.
 
 ## Rights and usage
 

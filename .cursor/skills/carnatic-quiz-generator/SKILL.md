@@ -30,7 +30,7 @@ cd "$REPO_ROOT/carnatic-quiz-generator"
 
 Use the target folder name instead of `Quiz39`. Optional: `--seed 42` for reproducible clip order.
 
-6. Report the output path (default: `<quiz-dir>/<folder>_video.mp4`, e.g. `Quiz39/Quiz39_video.mp4`).
+6. Report the output folder (default: `completed-videos/Quiz{N}/` containing `Quiz{N}_video.mp4`, `quiz-text.md`, and `quiz-answer.md`).
 
 ### Audio naming
 
@@ -58,15 +58,23 @@ Full-length recordings for clip extraction are in **`audio-clips/`** (downloaded
 ls audio-clips/*.mp3
 ```
 
-Never edit originals in `audio-clips/` — trim copies into the quiz folder. **Ragam selection** uses the Excel spreadsheet (`automation-process.md`), not filenames in `audio-clips/`.
+Never edit originals in `audio-clips/` — trim copies into the quiz folder.
 
-## Prepare a new quiz (manual — not scripted yet)
+## Select tracks (automated)
 
-Follow `carnatic-quiz-generator/automation-process.md` until spreadsheet/clip automation exists:
+```bash
+./fetch_audio_clips.sh   # if audio-clips/ is empty or selection fails
+.venv/bin/python select_quiz_tracks.py [--seed 42] [--json]
+```
 
-1. Pick **two ragams** that differ by only one or two notes (subtle “odd one out”) using the **Excel spreadsheet**.
-2. Choose **3** audio sources from one ragam and **1** from the other (random pair each run) from **`audio-clips/`**, guided by spreadsheet ragam metadata.
-3. Extract ~**30 seconds** per clip with **vocal** content; label working files clip1–clip4 where **clip4 is always the odd ragam**.
+Uses `MasterWebAppMusicIndex.csv`, `ragam_pairs.json`, and `musicians.json`. Picks a random similar ragam pair with 3 local vocal tracks from the main ragam and 1 from the odd ragam. **Only artists with a matching photo in `Pics/` are eligible** — tracks without a performer image are skipped. Clip 4 is always the odd ragam.
+
+## Prepare a new quiz (partially automated)
+
+Follow `carnatic-quiz-generator/automation-process.md`:
+
+1. Run **`select_quiz_tracks.py`** (steps above).
+2. Extract ~**30 seconds** per clip with **vocal** content from the listed local source files; label working files clip1–clip4 where **clip4 is always the odd ragam**.
 4. **Checkpoint after each clip** — confirm the segment before continuing.
 5. Create the next numbered folder: `Quiz42`, `Quiz43`, … (scan existing `Quiz*` folders for the highest number + 1).
 6. Place in that folder:
@@ -78,7 +86,7 @@ Follow `carnatic-quiz-generator/automation-process.md` until spreadsheet/clip au
 
 ## Rules
 
-- Never delete or overwrite an existing `*_video.mp4` without explicit user approval.
+- Never delete or overwrite an existing file in `completed-videos/` without explicit user approval.
 - Do not change source recordings in place; copy trimmed clips into the quiz folder.
 - Three clips must share one ragam; the fourth must be the similar “odd” ragam (not random unrelated ragams).
 
@@ -90,6 +98,7 @@ Follow `carnatic-quiz-generator/automation-process.md` until spreadsheet/clip au
 | `No picture found for performer key` | Add or rename a file under `Pics/` |
 | `ffmpeg failed` | Install ffmpeg; verify MP3s play |
 | Wrong on-screen name | Fix key in `performers.json` |
+| `No valid ragam pairs` | Run `./fetch_audio_clips.sh` or `./fetch_album.sh <Musician> <ConcertFolder>` |
 
 ## Reference
 

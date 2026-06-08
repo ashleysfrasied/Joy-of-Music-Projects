@@ -28,7 +28,7 @@ python3 -m venv .venv
 .venv/bin/python build_quiz_video.py --quiz-dir Quiz39
 ```
 
-Output: `Quiz39/Quiz39_video.mp4`
+Output: `completed-videos/Quiz1/Quiz1_video.mp4` plus `quiz-text.md` and `quiz-answer.md` in the same folder (auto-incremented: `Quiz2/`, …)
 
 Use `--seed 42` for a reproducible clip order.
 
@@ -43,7 +43,12 @@ Download source files:
 ls audio-clips/*.mp3
 ```
 
-When preparing a quiz, use the **Excel spreadsheet** (see `automation-process.md`) to pick ragam pairs and source tracks, then extract ~30 second vocal segments into the target `Quiz*` folder. Never edit the originals in `audio-clips/`.
+Pick quiz tracks from **`MasterWebAppMusicIndex.csv`** with `select_quiz_tracks.py`, then extract ~30 second vocal segments into the target `Quiz*` folder. Only artists with a photo in `Pics/` are eligible — the selector skips everyone else. Never edit the originals in `audio-clips/`.
+
+```bash
+.venv/bin/python select_quiz_tracks.py          # random 3+1 selection
+.venv/bin/python select_quiz_tracks.py --seed 42 --json
+```
 
 ## What each quiz folder needs
 
@@ -85,7 +90,12 @@ Prefer hyphens (`Performer-Ragam.mp3`). Underscore-only names (e.g. `MSS_Kharaha
 | Path | Purpose |
 |------|---------|
 | `audio-clips/` | Full-length source MP3s (gitignored; fetch with `fetch_audio_clips.sh`) |
-| `fetch_audio_clips.sh` | Download source MP3s from GCS |
+| `fetch_audio_clips.sh` | Download starter source MP3s from GCS |
+| `fetch_album.sh` | Download one album: `./fetch_album.sh <Musician> <ConcertFolder>` |
+| `MasterWebAppMusicIndex.csv` | Song/ragam catalog for track selection |
+| `ragam_pairs.json` | Curated similar ragam pairs (main + odd) |
+| `musicians.json` | Maps CSV `Musician` values to `performers.json` keys |
+| `select_quiz_tracks.py` | Random 3+1 track selection from local `audio-clips/` (requires `Pics/` match) |
 | `Pics/` | Performer photos (`.jpg`, `.jpeg`, `.png`, `.webp`, `.gif`) |
 | `performers.json` | Maps short keys to full display names on clip slides |
 | `intro-background.jpg` | Background for the intro slide |
@@ -102,7 +112,8 @@ Add new performers to `performers.json` and drop a matching image into `Pics/` b
 |------|---------|---------|
 | `--quiz-dir` | `Quiz39` | Folder with MP3s and `quiz-text.md` |
 | `--assets-dir` | project root | Location of `Pics/`, `performers.json`, intro background |
-| `--output` | `<quiz-dir>/<name>_video.mp4` | Output video path |
+| `--output` | `completed-videos/Quiz{N}/Quiz{N}_video.mp4` | Output video path (auto-numbered) |
+| `--completed-videos-dir` | `<assets-dir>/completed-videos` | Root folder for numbered quiz outputs |
 | `--intro-duration` | `8.0` | Intro length in seconds |
 | `--clip-max-duration` | `30.0` | Max seconds per clip (audio trimmed if longer) |
 | `--seed` | (random) | Fixed seed for clip shuffle order |
@@ -112,31 +123,43 @@ Add new performers to `performers.json` and drop a matching image into `Pics/` b
 
 ```text
 carnatic-quiz-generator/
-├── build_quiz_video.py      # Video builder (implemented)
-├── automation-process.md    # Full workflow spec (partially automated)
+├── build_quiz_video.py         # Video builder (implemented)
+├── select_quiz_tracks.py       # Random 3+1 track selection (implemented)
+├── music_index.py              # CSV loader and filters
+├── MasterWebAppMusicIndex.csv  # Song/ragam catalog
+├── ragam_pairs.json            # Similar ragam pairs
+├── musicians.json              # Musician → performer key map
+├── automation-process.md       # Full workflow spec (partially automated)
 ├── performers.json
 ├── intro-background.jpg
-├── fetch_audio_clips.sh     # Download source MP3s from GCS
-├── audio-clips/             # Full-length source MP3s (gitignored)
-├── Pics/                    # Performer photos
-├── Quiz39/                  # Example: complete quiz + video
-├── Quiz40/                  # MP3s only (no video yet)
+├── fetch_audio_clips.sh        # Download starter albums from GCS
+├── fetch_album.sh              # Download one album from GCS
+├── audio-clips/                # Full-length source MP3s (gitignored)
+├── Pics/                       # Performer photos
+├── completed-videos/           # Finished quizzes (Quiz1/, Quiz2/, … each with video + metadata)
+├── Quiz39/                     # Example: complete quiz + source clips
+├── Quiz40/                     # MP3s only (no video yet)
 ├── Quiz41/
 └── requirements.txt
 ```
 
 ## Planned workflow
 
-See `automation-process.md` for the end-to-end process Ashley described. **Implemented today:** step 10 (video from four clips + artist images) and step 11 (`quiz-text.md` maps filenames to artist names via `performers.json`).
+See `automation-process.md` for the end-to-end process Ashley described.
+
+**Implemented today:**
+
+- Ragam pair + track selection (`select_quiz_tracks.py` + `MasterWebAppMusicIndex.csv`)
+- Video from four clips + artist images (`build_quiz_video.py`)
+- Intro copy + performer names (`quiz-text.md`, `performers.json`)
 
 **Not yet automated:**
 
-- Picking ragam pairs from a spreadsheet (similar ragams, 3+1 clip selection)
 - Extracting ~30s vocal segments from `audio-clips/` source recordings
 - Human approval checkpoints per clip
 - Auto-creating numbered quiz folders and metadata files
 
-Until those steps exist, prepare each quiz folder manually (four MP3s + `quiz-text.md`), then run `build_quiz_video.py`.
+After `select_quiz_tracks.py` picks four source tracks, trim clips manually into a `Quiz*` folder, then run `build_quiz_video.py`.
 
 ## Tests
 
@@ -152,3 +175,4 @@ Until those steps exist, prepare each quiz folder manually (four MP3s + `quiz-te
 | `No picture found for performer key` | Add a photo to `Pics/` whose filename matches the audio prefix |
 | `ffmpeg failed` | Install ffmpeg or check that MP3 files are valid |
 | Wrong name on slide | Add or fix the key in `performers.json` |
+| `No valid ragam pairs` | Run `./fetch_audio_clips.sh` or fetch more albums with `fetch_album.sh` |
