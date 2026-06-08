@@ -7,8 +7,8 @@ import pytest
 
 BINGO_ROOT = Path(__file__).resolve().parent.parent
 
-CONCERT_DOCX = BINGO_ROOT / "Input_Bingo_Questions.docx"
-MCQ_DOCX = BINGO_ROOT / "Input_Multiple_Choice_Question_And_Answer_List.docx"
+CONCERT_DOCX = BINGO_ROOT / "input_bingo_questions.docx"
+MCQ_DOCX = BINGO_ROOT / "input_multiple_choice_Q&A.docx"
 
 
 @pytest.fixture

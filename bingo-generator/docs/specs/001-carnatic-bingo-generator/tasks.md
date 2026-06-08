@@ -31,8 +31,8 @@
 
 ### Parser tests
 
-- [X] T004 [P] [US1] Add `tests/test_parse_concert_list.py` asserting `parse_concert_clues` returns 24 strings from `Input_Bingo_Questions.docx` and excludes title `Bingo quiz concerts` (covers FR-001)
-- [X] T005 [P] [US1] Add `tests/test_parse_mcqs.py` asserting `parse_mcqs` returns 20 items with `question`, `options` (len 4), and `answer` in `A`–`D` from `Input_Multiple_Choice_Question_And_Answer_List.docx` (covers FR-002)
+- [X] T004 [P] [US1] Add `tests/test_parse_concert_list.py` asserting `parse_concert_clues` returns 24 strings from `input_bingo_questions.docx` and excludes title `Bingo quiz concerts` (covers FR-001)
+- [X] T005 [P] [US1] Add `tests/test_parse_mcqs.py` asserting `parse_mcqs` returns 20 items with `question`, `options` (len 4), and `answer` in `A`–`D` from `input_multiple_choice_Q&A.docx` (covers FR-002)
 
 ### State and rotation tests
 

@@ -16,9 +16,9 @@ from docx import Document
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
-CONCERT_LIST_FILENAME = "Input_Bingo_Questions.docx"
-MCQ_LIST_FILENAME = "Input_Multiple_Choice_Question_And_Answer_List.docx"
-TEMPLATE_FILENAME = "Input_Reference_Carnatic_Bingo_Sheet.docx"
+CONCERT_LIST_FILENAME = "input_bingo_questions.docx"
+MCQ_LIST_FILENAME = "input_multiple_choice_Q&A.docx"
+TEMPLATE_FILENAME = "input_reference_bingo_sheet.docx"
 LOGO_FILENAME = "BrandLogoTJOMWords-SideBySide-WhiteBG.jpg"
 LOGO_PNG_FILENAME = "logo.png"
 OUTPUT_SUBDIR = "completed-bingo-sheets"

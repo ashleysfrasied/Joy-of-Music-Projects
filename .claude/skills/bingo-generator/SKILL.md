@@ -21,7 +21,7 @@ cd "$REPO_ROOT/bingo-generator"
 
 1. `cd` to `bingo-generator/` (see above).
 2. If `.venv` is missing: `python3 -m venv .venv && .venv/bin/pip install -r requirements.txt`
-3. Confirm `Input_Reference_Carnatic_Bingo_Sheet.docx` exists (layout template; edit in Word for formatting).
+3. Confirm `input_reference_bingo_sheet.docx` exists (layout template; edit in Word for formatting).
 4. If generator code changed: `.venv/bin/python -m pytest tests/ -v` (must pass before generating).
 5. Run: `.venv/bin/python carnatic_bingo_generator.py`
 6. Read `bingo_state.json` → last item in `generated_sheets` and report:
@@ -31,8 +31,8 @@ cd "$REPO_ROOT/bingo-generator"
 
 ## Rules
 
-- Never edit `Input_Bingo_Questions.docx` or `Input_Multiple_Choice_Question_And_Answer_List.docx` during a run (generator reads them).
-- Edit `Input_Reference_Carnatic_Bingo_Sheet.docx` for layout/formatting; the generator copies it and only replaces sheet number, shuffled clues, and MCQ text.
+- Never edit `input_bingo_questions.docx` or `input_multiple_choice_Q&A.docx` during a run (generator reads them).
+- Edit `input_reference_bingo_sheet.docx` for layout/formatting; the generator copies it and only replaces sheet number, shuffled clues, and MCQ text. Formatting and static content flow through automatically; changing table sizes or grid structure requires code changes.
 - Never overwrite files in `completed-bingo-sheets/`.
 
 ## Manual commands

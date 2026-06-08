@@ -60,14 +60,14 @@ Developers and agents run pytest before declaring work complete. Tests use tempo
 - **Fewer than 20 MCQs in MCQ list**: Generator fails with a clear error.
 - **Shuffle collision**: If random shuffle matches a prior `past_clue_orders` entry, retry up to 100 times then fail loud.
 - **Missing logo file**: Generator fails with a clear error naming `BrandLogoTJOMWords-SideBySide-WhiteBG.jpg`.
-- **Layout template**: `Input_Reference_Carnatic_Bingo_Sheet.docx` is copied per run; only sheet number, shuffled clues, and MCQ text are replaced. Automated numbering still starts at #1 on first run.
+- **Layout template**: `input_reference_bingo_sheet.docx` is copied per run; only sheet number, shuffled clues, and MCQ text are replaced. Automated numbering still starts at #1 on first run.
 
 ## Requirements *(mandatory)*
 
 ### Functional Requirements
 
-- **FR-001**: System MUST parse exactly 24 concert clues from `Input_Bingo_Questions.docx`, skipping the title paragraph `Bingo quiz concerts`.
-- **FR-002**: System MUST parse exactly 20 multiple-choice questions from `Input_Multiple_Choice_Question_And_Answer_List.docx`, each with four options and an answer letter A–D.
+- **FR-001**: System MUST parse exactly 24 concert clues from `input_bingo_questions.docx`, skipping the title paragraph `Bingo quiz concerts`.
+- **FR-002**: System MUST parse exactly 20 multiple-choice questions from `input_multiple_choice_Q&A.docx`, each with four options and an answer letter A–D.
 - **FR-003**: System MUST assign clues to cells `A1`–`E5` excluding `C3` (FREE) via a permutation stored in `past_clue_orders` that differs from all prior permutations.
 - **FR-004**: System MUST render the "I Heard" table with labels `A1.`–`E5.` (excluding `C3`) and matching clue text in two columns of 12 rows.
 - **FR-005**: System MUST leave bingo grid data cells empty (except `C3` showing `★ Answer MCQ ★`).
@@ -76,7 +76,7 @@ Developers and agents run pytest before declaring work complete. Tests use tempo
 - **FR-008**: System MUST write each new sheet to `completed-bingo-sheets/Carnatic_Bingo_Sheet_{NNN}.docx` without overwriting existing files.
 - **FR-009**: System MUST append each generation to `bingo_state.json` → `generated_sheets` with filename, path, timestamp, `mcq_index`, and question text.
 - **FR-010**: System MUST include logo `BrandLogoTJOMWords-SideBySide-WhiteBG.jpg` on both pages.
-- **FR-011**: System MUST NOT modify source docx files or `Input_Reference_Carnatic_Bingo_Sheet.docx` on disk (read-only template).
+- **FR-011**: System MUST NOT modify source docx files or `input_reference_bingo_sheet.docx` on disk (read-only template).
 - **FR-012**: The `bingo-generator` skill MUST document the exact commands and summary format for agent runs.
 
 ### Success Criteria *(mandatory)*
@@ -90,4 +90,4 @@ Developers and agents run pytest before declaring work complete. Tests use tempo
 
 - Python 3 and `python-docx` are available locally.
 - Source Word files remain in the bingo project root with the current filenames.
-- Grid layout and static content come from `Input_Reference_Carnatic_Bingo_Sheet.docx` (2 pages, 6×6 grid, page-2 tracking tables unchanged except MCQ content).
+- Grid layout and static content come from `input_reference_bingo_sheet.docx` (2 pages, 6×6 grid, page-2 tracking tables unchanged except MCQ content).
